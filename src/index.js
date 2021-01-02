@@ -4,9 +4,22 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+//function get_lesson_name() {
+//
+//}
+//function fetch_from_server(lesson) {
+//  return {
+//    1: "hello",
+//    2: "bye"
+//  }[lesson]
+//}
+
+//curr_lesson = get_lesson_name();
+//text = fetch_from_server(curr_lesson)
+
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <App text="hello"/>
   </React.StrictMode>,
   document.getElementById('root')
 );
