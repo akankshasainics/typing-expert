@@ -19,7 +19,7 @@ import reportWebVitals from './reportWebVitals';
 
 ReactDOM.render(
   <React.StrictMode>
-    <App text="hello"/>
+    <App text="typethistextfromyourkeyboard"/>
   </React.StrictMode>,
   document.getElementById('root')
 );
