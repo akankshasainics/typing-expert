@@ -9,9 +9,8 @@ class App extends react.Component {
     super(props);
     this.state = {
       position : 0,
-      wrong_types : [],
-      correcting: [],
-      corrected : [],
+      curr_typed: "",
+      mis_typed: []
     }
   }
 
@@ -33,16 +32,20 @@ class App extends react.Component {
     for(var i=0; i < this.state.position +1 ; i++){
       var ch = this.props.text[i];
       var state = null;
-      if(this.state.corrected.indexOf(i) != -1){
+      if(this.state.mis_typed.indexOf(i) != -1 && this.state.curr_typed[i] == this.props.text[i]){
         state = "corrected";
       }
 
-      else if(this.state.wrong_types.indexOf(i) != -1){
-        state = "wrong typed";
+      else if(i == this.state.position){
+        state = "focused";
       }
 
-      else if(i >= this.state.position){
+      else if(i > this.state.position){
         state = "un typed";
+      }
+
+      else if(this.state.mis_typed.indexOf(i) != -1){
+        state = "wrong typed";
       }
 
       else{
@@ -53,29 +56,11 @@ class App extends react.Component {
       obj[ch] = state;
       current_state.push(obj);
     }
-
     return current_state;
   }
 
 
-  remove_from_wrong_types = () => {
-      var index = this.state.wrong_types.indexOf(this.state.position -1);
-      var wrong_types = this.state.wrong_types.slice();
-      var correcting = this.state.correcting;
-
-      if (index != -1) {
-         wrong_types.splice(index, 1);
-         correcting.push(this.state.position - 1);
-      }
-
-        this.setState({
-          wrong_types: wrong_types,
-          correcting: correcting
-        });
-
-  }
-
-  make_characters = () => {
+ make_characters = () => {
     var current_state = this.get_key_information();
     var characters = [];
 
@@ -95,42 +80,27 @@ class App extends react.Component {
 
   onKeyDown = (event) => {
     if (event.key === 'Backspace') {
-      this.remove_from_wrong_types();
+      var position = Math.max(this.state.position - 1,0)
       this.setState({
-        position : Math.max(this.state.position - 1,0),
+        position : position,
+        curr_typed: this.state.curr_typed.substring(0, position)
       });
     }
   }
 
-  push_to_corrected = () => {
-    var index = this.state.correcting.indexOf(this.state.position);
-    var correcting = this.state.correcting.slice();
-    var corrected = this.state.corrected.slice();
-
-    if (index != -1) {
-       correcting.splice(index, 1);
-       corrected.push(this.state.position);
-    }
-
-    this.setState({
-        position : this.state.position + 1,
-        correcting : correcting,
-        corrected : corrected,
-    });
-  }
-
-
   handleKeyPress = (event) => {
+    this.setState({
+      position: this.state.position + 1,
+      curr_typed: this.state.curr_typed + event.key
+    });
     if(event.key != this.props.text[this.state.position]){
-      var wrong_types = this.state.wrong_types;
-      wrong_types.push(this.state.position);
+      var mis_typed = this.state.mis_typed;
+      mis_typed.push(this.state.position);
       this.setState({
-        position: this.state.position + 1,
-        wrong_types: wrong_types
+        mis_typed: mis_typed,
       });
       return;
     }
-    this.push_to_corrected();
   }
 
 
@@ -146,13 +116,13 @@ class App extends react.Component {
         return (
       <>
       <div ref="mainDiv" tabIndex="0" onKeyPress={this.handleKeyPress} onKeyDown={this.onKeyDown}> 
-        <span> {this.state.position} </span>
+        <progress class="m-10 bg-blue-100 blue h-1 w-11/12" value={this.state.position} max={this.props.text.length}></progress>
+
         <br/>
         <br/>
           <div>
-              <span> {characters} </span>
+              <span class="m-auto block w-max"> {characters} </span>
           </div>
-        <Keyboard Key={this.props.text[this.state.position]} />
       </div>
       </>
     );
@@ -164,7 +134,7 @@ class Character extends react.Component {
   constructor(props){
     super(props);
     this.state = {
-      character_state : Object.freeze({"right typed":"green", "corrected":"yellow", "wrong typed":"red", "un typed":"grey"}),
+        character_state : Object.freeze({"right typed":"bg-green-100", "corrected":"bg-yellow-100", "wrong typed":"bg-red-100", "un typed":"bg-gray-50", "focused": "bg-blue-100"}),
     }
   }
   render(){
@@ -172,9 +142,8 @@ class Character extends react.Component {
       var ch = i;
       var state  = this.props.character[i];
     }
-
     return (<>
-       <span class="p-3 text-grey-10" style={{color: this.state.character_state[state]}}> {ch} </span> 
+       <span class={`${this.state.character_state[state]} p-1 m-0.5 text-gray-500 text-2xl rounded-sm`}> {ch} </span> 
       </>)
   }
 }
