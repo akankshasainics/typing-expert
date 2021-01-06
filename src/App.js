@@ -4,11 +4,63 @@ import ReactDOM from 'react-dom';
 import './App.css';
 
 
+export class Analyzer  {
+  constructor(keystrokes, targetString){
+    this.keystrokes = keystrokes;
+    this.targetString = targetString;
+   }
+ 
+  get_typed_string(){
+    var typed = "";
+    for(var keystroke of this.keystrokes){
+      if (keystroke[0]==="backspace" && typed.length >0){
+        typed = typed.substring(0, typed.length - 1)
+       } else {
+         typed += keystroke[0];
+       }
+    }
+    return typed
+  }
+
+
+  calculate_speed() {
+      if(this.keystrokes.length <= 1){
+        return 0;
+      }
+      var no_of_right_typed_words = this.get_correctly_typed_words();
+      var start = this.keystrokes[0][1];
+      var end = this.keystrokes[this.keystrokes.length -1][1];
+      var wpmillisecond = no_of_right_typed_words/(end-start);
+      var wpm = (wpmillisecond*1000*60).toFixed(2);
+      return wpm;
+  }
+
+  get_correctly_typed_words() {
+      var words = this.targetString.split(" ");
+      var typed_words = this.get_typed_string().split(" ");   
+      var no_of_right_typed_words = 0;
+      var i = 0;
+      while(i < typed_words.length && i < words.length){
+        if( i === typed_words.length -1){
+          no_of_right_typed_words += words[i].includes(typed_words[i]);
+        }
+        else if(typed_words[i] === words[i]){
+          no_of_right_typed_words += 1;
+        }
+        i += 1;
+      }
+      return no_of_right_typed_words;
+  }
+}
+
+
+
 class App extends react.Component {
   constructor(props){
     super(props);
     this.state = {
-      starting_time : (new Date()).getTime()/1000,
+      keystrokes:   [],
+      starting_time : (new Date()).getTime(),
       ending_time : Number.POSITIVE_INFINITY,
       position : 0,
       curr_typed: "",
@@ -35,11 +87,11 @@ class App extends react.Component {
     for(var i=0; i < this.state.position +1 ; i++){
       var ch = this.props.text[i];
       var state = null;
-      if(this.state.mis_typed.indexOf(i) != -1 && this.state.curr_typed[i] == this.props.text[i]){
+      if(this.state.mis_typed.indexOf(i) !== -1 && this.state.curr_typed[i] === this.props.text[i]){
         state = "corrected";
       }
 
-      else if(i == this.state.position){
+      else if(i === this.state.position){
         state = "focused";
       }
 
@@ -47,7 +99,7 @@ class App extends react.Component {
         state = "un typed";
       }
 
-      else if(this.state.mis_typed.indexOf(i) != -1){
+      else if(this.state.mis_typed.indexOf(i) !== -1){
         state = "wrong typed";
       }
 
@@ -66,12 +118,12 @@ class App extends react.Component {
  make_characters = () => {
     var current_state = this.get_key_information();
     var characters = [];
-
-    for (var i=0 ; i < current_state.length; i++) {
+    var i = 0;
+    for (i=0 ; i < current_state.length; i++) {
         characters.push(<Character character={current_state[i]} />);
     }
 
-    for(var i= this.state.position+1; i < this.props.text.length; i++){
+    for(i= this.state.position+1; i < this.props.text.length; i++){
         var obj = {}
         var ch = this.props.text[i];
         obj[ch] = "un typed";
@@ -83,23 +135,25 @@ class App extends react.Component {
 
   onKeyDown = (event) => {
     if (event.key === 'Backspace') {
-      var position = Math.max(this.state.position - 1,0)
-      this.setState({
+      var position = Math.max(this.state.position -1, 0);
+      this.setState((state) => ({
         position : position,
+        keystrokes : state.keystrokes.concat([[event.key, (new Date()).getTime()]]),
         curr_typed: this.state.curr_typed.substring(0, position),
         ending_time: (new Date()).getTime()/1000,
-      });
+      }));
     }
   }
 
   handleKeyPress = (event) => {
-    this.setState({
-      position: this.state.position + 1,
-      curr_typed: this.state.curr_typed + event.key,
-      ending_time: (new Date()).getTime()/1000,
-    });
+    this.setState((state) => ({
+      keystrokes : state.keystrokes.concat([[event.key, (new Date()).getTime()]]),
+      position: state.position + 1,
+      curr_typed: state.curr_typed + event.key,
+      ending_time: (new Date()).getTime(),
+    }));
 
-    if(event.key != this.props.text[this.state.position]){
+    if(event.key !== this.props.text[this.state.position]){
       var mis_typed = this.state.mis_typed;
       mis_typed.push(this.state.position);
       this.setState({
@@ -108,41 +162,21 @@ class App extends react.Component {
       return;
     }
   }
-  
-  check_word_correctly_typed = (start_index, end_index) => {
-    for(var i=start_index ; i <= end_index; i++){
-      if(this.state.curr_typed.indexOf(i) != -1){
-        return 0;
-      }
-    }
-    return 1;
-  }
 
-  calculate_speed = () => {
-    var words = this.props.text.split(" ");
-    var no_of_right_typed_words = 0;
-    var len = 0;
-    for(var word of words){
-      len += word.length;
-      if(len > this.state.position){
-        break;
-      }
-      no_of_right_typed_words += this.check_word_correctly_typed(len - word.length, len);
-      len += 1;
-    }
-    var time_spend = ((this.state.ending_time - this.state.starting_time)/60).toFixed(2);
-    var wpm = (no_of_right_typed_words/time_spend).toFixed(2);
+  analyze_text = () => {
+    var analyzer = new Analyzer(this.state.keystrokes, this.props.text);
+    var wpm = analyzer.calculate_speed();
     return wpm;
   }
-
-
+  
+ 
   render(){
     var characters = this.make_characters();
-    var wpm = this.calculate_speed();
+    var wpm = this.analyze_text();
     
-    if (this.state.position == this.props.text.length) {
+    if (this.state.position === this.props.text.length) {
       return (<>
-          <Analysis wpm={wpm} />
+        <span> your speed is  {wpm} words/minute. </span>
         </>)
     }
   
@@ -156,7 +190,7 @@ class App extends react.Component {
           <div>
               <span class="m-auto block w-max"> {characters} </span>
           </div>
-          <span> {wpm} </span>
+            <span> {wpm} </span>
       </div>
       </>
     );
@@ -179,18 +213,6 @@ class Character extends react.Component {
     return (<>
        <span class={`${this.state.character_state[state]} p-1 m-0.5 text-gray-500 text-2xl rounded-sm`}> {ch} </span> 
       </>)
-  }
-}
-
-
-class Analysis extends react.Component {
-  constructor(props){
-    super(props);
-  }
-  render(){
-    return (
-        <span> Well done. Your speed is  {this.props.wpm} words/minute. </span>
-    );
   }
 }
 
