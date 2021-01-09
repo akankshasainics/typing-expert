@@ -2,6 +2,13 @@ import logo from './logo.svg';
 import react from 'react';
 import ReactDOM from 'react-dom';
 import './App.css';
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  useParams
+} from 'react-router-dom';
 
 
 export class Analyzer  {
@@ -22,6 +29,69 @@ export class Analyzer  {
     return typed
   }
 
+  get_all_words() {
+    let words = [];
+    let curr_word = "";
+    let curr_word_start = 0;
+    let i;
+    for (const [i, ks] of this.keystrokes.entries()) {
+      if (ks[0] === " ") {
+        if (curr_word.length !== 0) {
+            words.push([curr_word_start, i])
+            curr_word = "";
+            curr_word_start = i+1;
+        }
+      } else {
+        curr_word += ks[0]
+      }
+    }
+    if (curr_word.length !== 0) {
+        words.push([curr_word_start, this.keystrokes.length])
+        curr_word = "";
+        curr_word_start = i+1;
+    }
+    return words
+  }
+
+  get_fasted_typed_word(){
+    let word_indexes = this.get_all_words();
+    if (word_indexes.length === 0) {
+      return
+    }
+    let fastest_word_indexes = word_indexes[0];
+    let fastest_word_speed = 0;
+    for (let word_index of word_indexes) {
+      let word_speed = this.get_speed_between(word_index[0], word_index[1]);
+      if (word_speed > fastest_word_speed) {
+        fastest_word_indexes = word_index
+        fastest_word_speed = word_speed
+      }
+    }
+    return this.targetString.slice(fastest_word_indexes[0], fastest_word_indexes[1])
+  }
+
+  get_slowest_typed_word(){
+    let word_indexes = this.get_all_words();
+    if (word_indexes.length === 0) {
+      return
+    }
+    let slowest_word_indexes = word_indexes[0];
+    let slowest_word_speed = Number.POSITIVE_INFINITY;
+    for (let word_index of word_indexes) {
+      let word_speed = this.get_speed_between(word_index[0], word_index[1]);
+      if (word_speed < slowest_word_speed) {
+        slowest_word_indexes = word_index
+        slowest_word_speed = word_speed
+      }
+    }
+    console.log(slowest_word_indexes);
+    return this.targetString.slice(slowest_word_indexes[0], slowest_word_indexes[1])
+  }
+
+  get_speed_between(start, end) {
+    let small_analyzer = new Analyzer(this.keystrokes.slice(start, end), this.targetString.slice(start, end));
+    return small_analyzer.calculate_speed()
+  }
 
   calculate_speed() {
       if(this.keystrokes.length <= 1){
@@ -31,7 +101,7 @@ export class Analyzer  {
       var start = this.keystrokes[0][1];
       var end = this.keystrokes[this.keystrokes.length -1][1];
       var wpmillisecond = no_of_right_typed_words/(end-start);
-      var wpm = (wpmillisecond*1000*60).toFixed(2);
+      var wpm = Math.round(wpmillisecond*1000*60);
       return wpm;
   }
 
@@ -166,18 +236,21 @@ class App extends react.Component {
   analyze_text = () => {
     var analyzer = new Analyzer(this.state.keystrokes, this.props.text);
     var wpm = analyzer.calculate_speed();
-    return wpm;
+    var slowest_typed_word = analyzer.get_slowest_typed_word();
+    var fastest_typed_word = analyzer.get_fasted_typed_word();
+    return [wpm, slowest_typed_word, fastest_typed_word];
   }
   
  
   render(){
     var characters = this.make_characters();
-    var wpm = this.analyze_text();
+    var analyzers = this.analyze_text();
+    var wpm = analyzers[0];
+    var slowest_typed_word = analyzers[1];
+    var fastest_typed_word = analyzers[2];
     
     if (this.state.position === this.props.text.length) {
-      return (<>
-        <span> your speed is  {wpm} words/minute. </span>
-        </>)
+      return (<Result wpm={wpm} slowest_typed_word={slowest_typed_word} fastest_typed_word={fastest_typed_word}/>)
     }
   
     return (
@@ -202,7 +275,7 @@ class Character extends react.Component {
   constructor(props){
     super(props);
     this.state = {
-        character_state : Object.freeze({"right typed":"bg-green-100", "corrected":"bg-yellow-100", "wrong typed":"bg-red-100", "un typed":"bg-gray-50", "focused": "bg-blue-100"}),
+        character_state : Object.freeze({"right typed":"bg-green-100", "corrected":"bg-yellow-100", "wrong typed":"bg-red-100", "un typed":"bg-gray-50", "focused": "bg-gray-400"}),
     }
   }
   render(){
@@ -211,8 +284,33 @@ class Character extends react.Component {
       var state  = this.props.character[i];
     }
     return (<>
-       <span class={`${this.state.character_state[state]} p-1 m-0.5 text-gray-500 text-2xl rounded-sm`}> {ch} </span> 
+       <span style={{textDecoration: "underline"}} class={`${this.state.character_state[state]} p-1 m-0.5 text-gray-500 text-2xl rounded-sm`}> {ch} </span> 
       </>)
+  }
+}
+
+
+class Result extends react.Component {
+  constructor(props){
+    super(props);
+  }
+  render(){
+    return(
+      <>
+      <div class="center">
+        <span class="element-center">Results are here</span>
+      </div>
+      <div>
+        <span> {this.props.slowest_typed_word} </span>
+      </div> 
+      <div class="speed-center">
+          <span class="element-center"> {this.props.wpm} wpm </span>
+      </div>
+      <div>
+        <span> {this.props.fastest_typed_word} </span>
+      </div>
+      </>
+    );
   }
 }
 
@@ -231,5 +329,16 @@ class Keyboard extends react.Component {
   }
 }
 
+function Child() {
+  // We can use the `useParams` hook here to access
+  // the dynamic pieces of the URL.
+  let { id } = useParams();
+
+  return (
+    <div>
+      <h3>ID: {id}</h3>
+    </div>
+  );
+}
 export default App;
 

@@ -3,23 +3,13 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import Lessons from './Lessons';
+import Home from './Home';
 
-//function get_lesson_name() {
-//
-//}
-//function fetch_from_server(lesson) {
-//  return {
-//    1: "hello",
-//    2: "bye"
-//  }[lesson]
-//}
-
-//curr_lesson = get_lesson_name();
-//text = fetch_from_server(curr_lesson)
 
 ReactDOM.render(
   <React.StrictMode>
-    <App text="type this text from your keyboard"/>
+    <Home/>
   </React.StrictMode>,
   document.getElementById('root')
 );
